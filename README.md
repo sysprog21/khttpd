@@ -15,3 +15,8 @@ The server defaults to port 8081 but this can be easily configured using command
 `khttpdc`is released under the MIT License. Use of this source code is governed by
 a MIT License that can be found in the LICENSE file. 
 
+External source code:
+* `http_parser.[ch]`: taken from [nodejs/http-parser](https://github.com/nodejs/http-parser)
+  - Copyright Joyent, Inc. and other Node contributors.
+  - MIT License
+
