@@ -1,0 +1,14 @@
+# kernel module compile output
+*.ko.cmd
+*.o.cmd
+.tmp_versions
+*.symvers
+*.mod.c
+*.mod.o
+*.order
+*.o
+*.ko
+
+# Other
+http_parser.c
+http_parser.h
