@@ -9,6 +9,10 @@ all: http_parser.c
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
+# Download http_parser.[ch] from nodejs/http-parser repository
+# the inclusion of standard header files such as <string.h> will be replaced
+# with "compat/string.h", which is just a wrapper to Linux kernel headers.
+# TODO: rewrite with elegant scripts
 http_parser.c:
 	wget -q https://raw.githubusercontent.com/nodejs/http-parser/master/http_parser.c
 	@sed -i 's/#include <assert.h>/#include "compat\/assert.h"/' $@
