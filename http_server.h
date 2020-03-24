@@ -1,7 +1,6 @@
 #ifndef KHTTPD_HTTP_SERVER_H
 #define KHTTPD_HTTP_SERVER_H
 
-#include <linux/types.h>
 #include <net/sock.h>
 
 struct http_server_param {
