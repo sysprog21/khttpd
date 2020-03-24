@@ -4,29 +4,30 @@
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
 
-#include "common.h"
+#include "http_parser.h"
+#include "http_server.h"
 
 #define CRLF "\r\n"
 
 #define HTTP_RESPONSE_200_DUMMY                              \
     ""                                                       \
-    "HTTP/1.1 200 OK" CRLF "Server: " MODULE_NAME CRLF       \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF    \
     "Content-Type: text/plain" CRLF "Content-Length: 8" CRLF \
     "Connection: Close" CRLF CRLF "200 OK" CRLF
 #define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                    \
     ""                                                       \
-    "HTTP/1.1 200 OK" CRLF "Server: " MODULE_NAME CRLF       \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF    \
     "Content-Type: text/plain" CRLF "Content-Length: 8" CRLF \
     "Connection: Keep-Alive" CRLF CRLF "200 OK" CRLF
-#define HTTP_RESPONSE_501                                           \
-    ""                                                              \
-    "HTTP/1.1 501 Not Implemented" CRLF "Server: " MODULE_NAME CRLF \
-    "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF       \
+#define HTTP_RESPONSE_501                                              \
+    ""                                                                 \
+    "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
+    "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF          \
     "Connection: Close" CRLF CRLF "501 Not Implemented" CRLF
-#define HTTP_RESPONSE_501_KEEPALIVE                                 \
-    ""                                                              \
-    "HTTP/1.1 501 Not Implemented" CRLF "Server: " MODULE_NAME CRLF \
-    "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF       \
+#define HTTP_RESPONSE_501_KEEPALIVE                                    \
+    ""                                                                 \
+    "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
+    "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF          \
     "Connection: KeepAlive" CRLF CRLF "501 Not Implemented" CRLF
 
 #define RECV_BUFFER_SIZE 4096
@@ -200,7 +201,7 @@ int http_server_daemon(void *arg)
             pr_err("kernel_accept() error: %d\n", err);
             continue;
         }
-        worker = kthread_run(http_server_worker, socket, MODULE_NAME);
+        worker = kthread_run(http_server_worker, socket, KBUILD_MODNAME);
         if (IS_ERR(worker)) {
             pr_err("can't create more worker process\n");
             continue;

@@ -5,7 +5,7 @@
 #include <linux/tcp.h>
 #include <net/sock.h>
 
-#include "common.h"
+#include "http_server.h"
 
 #define DEFAULT_PORT 8081
 #define DEFAULT_BACKLOG 100
@@ -109,7 +109,7 @@ static int __init khttpd_init(void)
         return err;
     }
     param.listen_socket = listen_socket;
-    http_server = kthread_run(http_server_daemon, &param, MODULE_NAME);
+    http_server = kthread_run(http_server_daemon, &param, KBUILD_MODNAME);
     if (IS_ERR(http_server)) {
         pr_err("can't start http server daemon\n");
         close_listen_socket(listen_socket);
