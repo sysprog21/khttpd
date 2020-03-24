@@ -1,3 +1,5 @@
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/kthread.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
@@ -33,46 +35,41 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
 
     int err = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": sock_create() failure, err=%d\n", err);
+        pr_err("sock_create() failure, err=%d\n", err);
         return err;
     }
 
     err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
-               err);
+        pr_err("kernel_setsockopt() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
 
     err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
-               err);
+        pr_err("kernel_setsockopt() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
 
     err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
-               err);
+        pr_err("kernel_setsockopt() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
 
     err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
-               err);
+        pr_err("kernel_setsockopt() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
 
     err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
-               err);
+        pr_err("kernel_setsockopt() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
@@ -83,14 +80,14 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     s.sin_port = htons(port);
     err = kernel_bind(sock, (struct sockaddr *) &s, sizeof(s));
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_bind() failure, err=%d\n", err);
+        pr_err("kernel_bind() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
 
     err = kernel_listen(sock, backlog);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": kernel_listen() failure, err=%d\n", err);
+        pr_err("kernel_listen() failure, err=%d\n", err);
         sock_release(sock);
         return err;
     }
@@ -108,13 +105,13 @@ static int __init khttpd_init(void)
 {
     int err = open_listen_socket(port, backlog, &listen_socket);
     if (err < 0) {
-        printk(KERN_ERR MODULE_NAME ": can't open listen socket\n");
+        pr_err("can't open listen socket\n");
         return err;
     }
     param.listen_socket = listen_socket;
     http_server = kthread_run(http_server_daemon, &param, MODULE_NAME);
     if (IS_ERR(http_server)) {
-        printk(KERN_ERR MODULE_NAME ": can't start http server daemon\n");
+        pr_err("can't start http server daemon\n");
         close_listen_socket(listen_socket);
         return PTR_ERR(http_server);
     }
@@ -126,7 +123,7 @@ static void __exit khttpd_exit(void)
     send_sig(SIGTERM, http_server, 1);
     kthread_stop(http_server);
     close_listen_socket(listen_socket);
-    printk(KERN_INFO MODULE_NAME ": module unloaded\n");
+    pr_info("module unloaded\n");
 }
 
 module_init(khttpd_init);

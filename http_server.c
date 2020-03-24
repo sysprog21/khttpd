@@ -1,3 +1,5 @@
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/kthread.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
@@ -63,7 +65,7 @@ static int http_server_send(struct socket *sock, const char *buf, size_t size)
         };
         int length = kernel_sendmsg(sock, &msg, &iov, 1, iov.iov_len);
         if (length < 0) {
-            printk(KERN_ERR MODULE_NAME ": write error: %d\n", length);
+            pr_err("write error: %d\n", length);
             break;
         }
         done += length;
@@ -75,8 +77,7 @@ static int http_server_response(struct http_request *request, int keep_alive)
 {
     char *response;
 
-    printk(KERN_INFO MODULE_NAME ": requested_url = %s\n",
-           request->request_url);
+    pr_info("requested_url = %s\n", request->request_url);
     if (request->method != HTTP_GET)
         response = keep_alive ? HTTP_RESPONSE_501_KEEPALIVE : HTTP_RESPONSE_501;
     else
@@ -159,7 +160,7 @@ static int http_server_worker(void *arg)
     allow_signal(SIGTERM);
     buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
     if (!buf) {
-        printk(KERN_ERR MODULE_NAME ": can't allocate memory!\n");
+        pr_err("can't allocate memory!\n");
         return -1;
     }
     request.socket = socket;
@@ -169,7 +170,7 @@ static int http_server_worker(void *arg)
         int ret = http_server_recv(socket, buf, RECV_BUFFER_SIZE - 1);
         if (ret <= 0) {
             if (ret)
-                printk(KERN_ERR MODULE_NAME ": recv error: %d\n", ret);
+                pr_err("recv error: %d\n", ret);
             break;
         }
         http_parser_execute(&parser, &setting, buf, ret);
@@ -196,12 +197,12 @@ int http_server_daemon(void *arg)
         if (err < 0) {
             if (signal_pending(current))
                 break;
-            printk(KERN_ERR MODULE_NAME ": kernel_accept() error: %d\n", err);
+            pr_err("kernel_accept() error: %d\n", err);
             continue;
         }
         worker = kthread_run(http_server_worker, socket, MODULE_NAME);
         if (IS_ERR(worker)) {
-            printk(KERN_ERR MODULE_NAME ": can't create more worker process\n");
+            pr_err("can't create more worker process\n");
             continue;
         }
     }
