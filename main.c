@@ -40,39 +40,24 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     }
 
     err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
-    if (err < 0) {
-        pr_err("kernel_setsockopt() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
-    }
+    if (err < 0)
+        goto bail_setsockopt;
 
     err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
-    if (err < 0) {
-        pr_err("kernel_setsockopt() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
-    }
+    if (err < 0)
+        goto bail_setsockopt;
 
     err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
-    if (err < 0) {
-        pr_err("kernel_setsockopt() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
-    }
+    if (err < 0)
+        goto bail_setsockopt;
 
     err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
-    if (err < 0) {
-        pr_err("kernel_setsockopt() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
-    }
+    if (err < 0)
+        goto bail_setsockopt;
 
     err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
-    if (err < 0) {
-        pr_err("kernel_setsockopt() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
-    }
+    if (err < 0)
+        goto bail_setsockopt;
 
     memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
@@ -81,18 +66,22 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     err = kernel_bind(sock, (struct sockaddr *) &s, sizeof(s));
     if (err < 0) {
         pr_err("kernel_bind() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
+        goto bail_sock;
     }
 
     err = kernel_listen(sock, backlog);
     if (err < 0) {
         pr_err("kernel_listen() failure, err=%d\n", err);
-        sock_release(sock);
-        return err;
+        goto bail_sock;
     }
     *res = sock;
     return 0;
+
+bail_setsockopt:
+    pr_err("kernel_setsockopt() failure, err=%d\n", err);
+bail_sock:
+    sock_release(sock);
+    return err;
 }
 
 static void close_listen_socket(struct socket *socket)
