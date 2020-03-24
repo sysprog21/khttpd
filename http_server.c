@@ -48,7 +48,6 @@ static int http_server_recv(struct socket *sock, char *buf, size_t size)
                          .msg_controllen = 0,
                          .msg_flags = 0};
     return kernel_recvmsg(sock, &msg, &iov, 1, size, msg.msg_flags);
-    ;
 }
 
 static int http_server_send(struct socket *sock, const char *buf, size_t size)
@@ -159,11 +158,13 @@ static int http_server_worker(void *arg)
 
     allow_signal(SIGKILL);
     allow_signal(SIGTERM);
+
     buf = kmalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
     if (!buf) {
         pr_err("can't allocate memory!\n");
         return -1;
     }
+
     request.socket = socket;
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = &request;
