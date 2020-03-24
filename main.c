@@ -20,7 +20,7 @@ static struct task_struct *http_server;
 static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
 {
     struct socket *sock;
-    int err, opt = 1;
+    int err, opt;
     struct sockaddr_in s;
 
     err = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
