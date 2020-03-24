@@ -17,62 +17,66 @@ static struct socket *listen_socket;
 static struct http_server_param param;
 static struct task_struct *http_server;
 
+static inline int setsockopt(struct socket *sock,
+                             int level,
+                             int optname,
+                             int optval)
+{
+    int opt = optval;
+    return kernel_setsockopt(sock, level, optname, (char *) &opt, sizeof(opt));
+}
+
 static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
 {
     struct socket *sock;
-    int err, opt;
     struct sockaddr_in s;
 
-    err = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
+    int err = sock_create(PF_INET, SOCK_STREAM, IPPROTO_TCP, &sock);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": sock_create() failure, err=%d\n", err);
         return err;
     }
-    opt = 1;
-    err = kernel_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &opt,
-                            sizeof(opt));
+
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
                err);
         sock_release(sock);
         return err;
     }
-    opt = 1;
-    err = kernel_setsockopt(sock, SOL_TCP, TCP_NODELAY, (char *) &opt,
-                            sizeof(opt));
+
+    err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
                err);
         sock_release(sock);
         return err;
     }
-    opt = 0;
-    err =
-        kernel_setsockopt(sock, SOL_TCP, TCP_CORK, (char *) &opt, sizeof(opt));
+
+    err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
                err);
         sock_release(sock);
         return err;
     }
-    opt = 1024 * 1024;
-    err = kernel_setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *) &opt,
-                            sizeof(opt));
+
+    err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
                err);
         sock_release(sock);
         return err;
     }
-    opt = 1024 * 1024;
-    err = kernel_setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *) &opt,
-                            sizeof(opt));
+
+    err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_setsockopt() failure, err=%d\n",
                err);
         sock_release(sock);
         return err;
     }
+
     memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -83,6 +87,7 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
         sock_release(sock);
         return err;
     }
+
     err = kernel_listen(sock, backlog);
     if (err < 0) {
         printk(KERN_ERR MODULE_NAME ": kernel_listen() failure, err=%d\n", err);
