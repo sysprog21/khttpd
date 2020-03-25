@@ -1,13 +1,17 @@
-CFILES = main.c http_server.c http_parser.c
+KDIR=/lib/modules/$(shell uname -r)/build
 
+TARGET = khttpd
 obj-m += khttpd.o
-khttpd-objs := $(CFILES:.c=.o)
+khttpd-objs := \
+	http_parser.o \
+	http_server.o \
+	main.o
 
 all: http_parser.c
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	make -C $(KDIR) M=$(PWD) modules
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
 
 # Download http_parser.[ch] from nodejs/http-parser repository
 # the inclusion of standard header files such as <string.h> will be replaced
