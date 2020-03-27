@@ -9,16 +9,16 @@
 
 #define CRLF "\r\n"
 
-#define HTTP_RESPONSE_200_DUMMY                              \
-    ""                                                       \
-    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF    \
-    "Content-Type: text/plain" CRLF "Content-Length: 8" CRLF \
-    "Connection: Close" CRLF CRLF "200 OK" CRLF
-#define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                    \
-    ""                                                       \
-    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF    \
-    "Content-Type: text/plain" CRLF "Content-Length: 8" CRLF \
-    "Connection: Keep-Alive" CRLF CRLF "200 OK" CRLF
+#define HTTP_RESPONSE_200_DUMMY                               \
+    ""                                                        \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
+    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
+    "Connection: Close" CRLF CRLF "Hello World!" CRLF
+#define HTTP_RESPONSE_200_KEEPALIVE_DUMMY                     \
+    ""                                                        \
+    "HTTP/1.1 200 OK" CRLF "Server: " KBUILD_MODNAME CRLF     \
+    "Content-Type: text/plain" CRLF "Content-Length: 12" CRLF \
+    "Connection: Keep-Alive" CRLF CRLF "Hello World!" CRLF
 #define HTTP_RESPONSE_501                                              \
     ""                                                                 \
     "HTTP/1.1 501 Not Implemented" CRLF "Server: " KBUILD_MODNAME CRLF \
