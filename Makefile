@@ -1,14 +1,18 @@
 KDIR=/lib/modules/$(shell uname -r)/build
 
-TARGET = khttpd
 obj-m += khttpd.o
 khttpd-objs := \
 	http_parser.o \
 	http_server.o \
 	main.o
 
-all: http_parser.c
+GIT_HOOKS := .git/hooks/applied
+all: $(GIT_HOOKS) http_parser.c
 	make -C $(KDIR) M=$(PWD) modules
+
+$(GIT_HOOKS):
+	@scripts/install-git-hooks
+	@echo
 
 clean:
 	make -C $(KDIR) M=$(PWD) clean
