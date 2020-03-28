@@ -1,7 +1,8 @@
 # khttpd
 
 `khttpd` is an experimental HTTP server implemented as Linux kernel module.
-The server defaults to port 8081 but this can be easily configured using command line arguments to the LKM.
+The server defaults to port 8081, but this can be easily configured using
+command line argument `port=?` when you are about to load the kernel module.
 
 ## TODO
 * Request queue and/or cache
@@ -20,5 +21,5 @@ External source code:
   - Copyrighted by Joyent, Inc. and other Node contributors.
   - MIT License
 * `htstress.c`: derived from [htstress](https://github.com/arut/htstress)
-  - Copyrighted byRoman Arutyunyan
+  - Copyrighted by Roman Arutyunyan
   - 2-clause BSD license
