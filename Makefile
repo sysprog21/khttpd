@@ -1,5 +1,8 @@
 KDIR=/lib/modules/$(shell uname -r)/build
 
+CFLAGS_user = -std=gnu99 -Wall -Wextra -Werror
+LDFLAGS_user = -lpthread
+
 obj-m += khttpd.o
 khttpd-objs := \
 	http_parser.o \
@@ -7,15 +10,22 @@ khttpd-objs := \
 	main.o
 
 GIT_HOOKS := .git/hooks/applied
-all: $(GIT_HOOKS) http_parser.c
+all: $(GIT_HOOKS) http_parser.c htstress
 	make -C $(KDIR) M=$(PWD) modules
 
 $(GIT_HOOKS):
 	@scripts/install-git-hooks
 	@echo
 
+htstress: htstress.c
+	$(CC) $(CFLAGS_user) -o $@ $< $(LDFLAGS_user)
+
+check: all
+	@scripts/test.sh
+
 clean:
 	make -C $(KDIR) M=$(PWD) clean
+	$(RM) htstress
 
 # Download http_parser.[ch] from nodejs/http-parser repository
 # the inclusion of standard header files such as <string.h> will be replaced

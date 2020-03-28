@@ -164,3 +164,17 @@ vec
 expr
 httpd
 daemon
+bench
+benchmark
+htstress
+workqueue
+percpu
+cmwq
+wq
+epoll
+kthread
+sock
+tcp
+udp
+msg
+http
