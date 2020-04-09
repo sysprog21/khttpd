@@ -4,7 +4,7 @@ CPPCHECK_suppresses="--suppress=missingIncludeSystem \
 	             --suppress=unusedFunction:http_parser.c \
                      --suppress=duplicateBreak:http_parser.c \
                      --suppress=shadowVariable:http_parser.c"
-CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses ."
+CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses"
 
 RETURN=0
 CLANG_FORMAT=$(which clang-format)
@@ -76,7 +76,9 @@ do
 done
 
 # static analysis
-$CPPCHECK $CPPCHECK_OPTS >/dev/null
+git ls-tree --full-tree -r --name-only HEAD | \
+   grep -v compat | grep -E "\.(c|cc|cpp|h|hh|hpp)\$" | \
+   xargs $CPPCHECK $CPPCHECK_OPTS >/dev/null
 if [ $? -ne 0 ]; then
     RETURN=1
     echo "" >&2
