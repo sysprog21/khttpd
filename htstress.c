@@ -40,6 +40,7 @@
 #include <netinet/tcp.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,11 +82,11 @@ static int num_threads = 1;
 
 static char *udaddr = "";
 
-static volatile uint64_t num_requests = 0;
+static volatile _Atomic uint64_t num_requests = 0;
 static volatile uint64_t max_requests = 0;
-static volatile uint64_t good_requests = 0;
-static volatile uint64_t bad_requests = 0;
-static volatile uint64_t socket_errors = 0;
+static volatile _Atomic uint64_t good_requests = 0;
+static volatile _Atomic uint64_t bad_requests = 0;
+static volatile _Atomic uint64_t socket_errors = 0;
 static volatile uint64_t in_bytes = 0;
 static volatile uint64_t out_bytes = 0;
 
@@ -214,7 +215,7 @@ static void *worker(void *arg)
                 if (number_of_errors_logged % 100 == 0) {
                     fprintf(stderr, "EPOLLERR caused by unknown error\n");
                 }
-                __sync_fetch_and_add(&socket_errors, 1);
+                atomic_fetch_add(&socket_errors, 1);
                 close(ec->fd);
                 if (num_requests > max_requests)
                     continue;
@@ -284,14 +285,14 @@ static void *worker(void *arg)
                 if (!ret) {
                     close(ec->fd);
 
-                    int m = __sync_fetch_and_add(&num_requests, 1);
+                    int m = atomic_fetch_add(&num_requests, 1);
 
                     if (max_requests && (m + 1 > (int) max_requests))
-                        __sync_fetch_and_sub(&num_requests, 1);
+                        atomic_fetch_sub(&num_requests, 1);
                     else if (ec->flags & BAD_REQUEST)
-                        __sync_fetch_and_add(&bad_requests, 1);
+                        atomic_fetch_add(&bad_requests, 1);
                     else
-                        __sync_fetch_and_add(&good_requests, 1);
+                        atomic_fetch_add(&good_requests, 1);
 
                     if (max_requests && (m + 1 >= (int) max_requests)) {
                         end_time();

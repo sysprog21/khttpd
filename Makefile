@@ -1,6 +1,6 @@
 KDIR=/lib/modules/$(shell uname -r)/build
 
-CFLAGS_user = -std=gnu99 -Wall -Wextra -Werror
+CFLAGS_user = -std=gnu11 -Wall -Wextra -Werror
 LDFLAGS_user = -lpthread
 
 obj-m += khttpd.o
