@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
+# http-parser was taken from Node.js, and we don't tend to validate it.
 CPPCHECK_suppresses="--suppress=missingIncludeSystem \
-	             --suppress=unusedFunction:http_parser.c \
+                     --suppress=unusedFunction:http_parser.c \
                      --suppress=duplicateBreak:http_parser.c \
                      --suppress=shadowVariable:http_parser.c"
 CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses"
