@@ -5,11 +5,10 @@ The server defaults to port 8081, but this can be easily configured using
 command line argument `port=?` when you are about to load the kernel module.
 
 ## TODO
+* Release resources when HTTP connection is about to be closed.
+* Introduce CMWQ.
+* Improve memory management.
 * Request queue and/or cache
-* Slab cache
-* Kthread pool
-* Dynamic framework
-* Reverse proxy
 
 ## License
 
