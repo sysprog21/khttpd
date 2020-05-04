@@ -152,8 +152,7 @@ static void init_conn(int efd, struct econn *ec)
     }
 
     struct epoll_event evt = {
-        .events = EPOLLOUT,
-        .data.ptr = ec,
+        .events = EPOLLOUT, .data.ptr = ec,
     };
 
     if (epoll_ctl(efd, EPOLL_CTL_ADD, ec->fd, &evt)) {
@@ -430,14 +429,16 @@ int main(int argc, char *argv[])
         *rq++ = 0;
         port = rq;
         rq = strchr(rq, '/');
-        if (*rq == '/') {
-            port = strndup(port, rq - port);
-            if (!port) {
-                perror("port = strndup(rq, rq - port)");
-                exit(EXIT_FAILURE);
-            }
-        } else
-            rq = "/";
+        if (rq) {
+            if (*rq == '/') {
+                port = strndup(port, rq - port);
+                if (!port) {
+                    perror("port = strndup(rq, rq - port)");
+                    exit(EXIT_FAILURE);
+                }
+            } else
+                rq = "/";
+        }
     }
 
     if (strnlen(udaddr, sizeof(ssun->sun_path) - 1) == 0) {
@@ -487,9 +488,12 @@ int main(int argc, char *argv[])
     /* prepare request buffer */
     if (!host)
         host = node;
-    outbufsize = strlen(rq) + sizeof(HTTP_REQUEST_FMT) + strlen(host);
+    outbufsize = sizeof(HTTP_REQUEST_FMT) + strlen(host);
+    outbufsize += rq ? strlen(rq) : 1;
+
     outbuf = malloc(outbufsize);
-    outbufsize = snprintf(outbuf, outbufsize, HTTP_REQUEST_FMT, rq, host);
+    outbufsize =
+        snprintf(outbuf, outbufsize, HTTP_REQUEST_FMT, rq ? rq : "/", host);
 
     ticks = max_requests / 10;
 
