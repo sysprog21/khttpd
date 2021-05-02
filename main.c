@@ -19,15 +19,6 @@ static struct socket *listen_socket;
 static struct http_server_param param;
 static struct task_struct *http_server;
 
-static inline int setsockopt(struct socket *sock,
-                             int level,
-                             int optname,
-                             int optval)
-{
-    int opt = optval;
-    return kernel_setsockopt(sock, level, optname, (char *) &opt, sizeof(opt));
-}
-
 static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
 {
     struct socket *sock;
@@ -39,25 +30,10 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
         return err;
     }
 
-    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
-    if (err < 0)
-        goto bail_setsockopt;
-
-    err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
-    if (err < 0)
-        goto bail_setsockopt;
-
-    err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
-    if (err < 0)
-        goto bail_setsockopt;
-
-    err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
-    if (err < 0)
-        goto bail_setsockopt;
-
-    err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
-    if (err < 0)
-        goto bail_setsockopt;
+    sock_set_reuseaddr(sock->sk);
+    tcp_sock_set_nodelay(sock->sk);
+    tcp_sock_set_cork(sock->sk, 0);
+    sock_set_rcvbuf(sock->sk, 1024 * 1024);
 
     memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
@@ -77,8 +53,6 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     *res = sock;
     return 0;
 
-bail_setsockopt:
-    pr_err("kernel_setsockopt() failure, err=%d\n", err);
 bail_sock:
     sock_release(sock);
     return err;
