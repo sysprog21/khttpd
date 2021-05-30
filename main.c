@@ -77,8 +77,7 @@ static int kernel_setsockopt(struct socket *sock,
         return set_sock_opt(sock, level, optname, optval, optlen);
     else if (level == SOL_TCP)
         return set_tcp_opt(sock, level, optname, optval, optlen);
-    else
-        return -EINVAL;
+    return -EINVAL;
 }
 #endif
 
