@@ -20,7 +20,68 @@ static struct socket *listen_socket;
 static struct http_server_param param;
 static struct task_struct *http_server;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+static int _sock_setsockopt(struct socket *sock,
+                            int level,
+                            int optname,
+                            char *optval,
+                            unsigned int optlen)
+{
+    int ret = 0;
+
+    if (optlen < sizeof(int))
+        return -EINVAL;
+
+    switch (optname) {
+    case SO_REUSEADDR:
+        sock_set_reuseaddr(sock->sk);
+        break;
+    case SO_RCVBUF:
+        sock_set_rcvbuf(sock->sk, *(int *) optval);
+        break;
+    }
+
+    return ret;
+}
+
+static int _tcp_setsockopt(struct socket *sock,
+                           int level,
+                           int optname,
+                           char *optval,
+                           unsigned int optlen)
+{
+    int ret = 0;
+
+    if (optlen < sizeof(int))
+        return -EINVAL;
+
+    switch (optname) {
+    case TCP_NODELAY:
+        tcp_sock_set_nodelay(sock->sk);
+        break;
+    case TCP_CORK:
+        tcp_sock_set_cork(sock->sk, *(bool *) optval);
+        break;
+    }
+
+    return ret;
+}
+
+static int kernel_setsockopt(struct socket *sock,
+                             int level,
+                             int optname,
+                             char *optval,
+                             unsigned int optlen)
+{
+    if (level == SOL_SOCKET)
+        return _sock_setsockopt(sock, level, optname, optval, optlen);
+    else if (level == SOL_TCP)
+        return _tcp_setsockopt(sock, level, optname, optval, optlen);
+    else
+        return -EINVAL;
+}
+#endif
+
 static inline int setsockopt(struct socket *sock,
                              int level,
                              int optname,
@@ -29,41 +90,6 @@ static inline int setsockopt(struct socket *sock,
     int opt = optval;
     return kernel_setsockopt(sock, level, optname, (char *) &opt, sizeof(opt));
 }
-
-static int set_sockopt(struct socket *sock)
-{
-    int err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
-    if (err < 0)
-        return err;
-
-    err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
-    if (err < 0)
-        return err;
-
-    err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
-    if (err < 0)
-        return err;
-
-    err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
-    if (err < 0)
-        return err;
-
-    err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
-    return err;
-}
-
-#else /* KERNEL_VERSION >= 5.8.0 */
-
-static int set_sockopt(struct socket *sock)
-{
-    sock_set_reuseaddr(sock->sk);
-    tcp_sock_set_nodelay(sock->sk);
-    tcp_sock_set_cork(sock->sk, 0);
-    sock_set_rcvbuf(sock->sk, 1024 * 1024);
-    return 0;
-}
-
-#endif
 
 static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
 {
@@ -76,7 +102,23 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
         return err;
     }
 
-    err = set_sockopt(sock);
+    err = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, 1);
+    if (err < 0)
+        goto bail_setsockopt;
+
+    err = setsockopt(sock, SOL_TCP, TCP_NODELAY, 1);
+    if (err < 0)
+        goto bail_setsockopt;
+
+    err = setsockopt(sock, SOL_TCP, TCP_CORK, 0);
+    if (err < 0)
+        goto bail_setsockopt;
+
+    err = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, 1024 * 1024);
+    if (err < 0)
+        goto bail_setsockopt;
+
+    err = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, 1024 * 1024);
     if (err < 0)
         goto bail_setsockopt;
 
@@ -99,7 +141,7 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     return 0;
 
 bail_setsockopt:
-    pr_err("set_sockopt() failure, err=%d\n", err);
+    pr_err("kernel_setsockopt() failure, err=%d\n", err);
 bail_sock:
     sock_release(sock);
     return err;
