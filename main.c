@@ -21,11 +21,11 @@ static struct http_server_param param;
 static struct task_struct *http_server;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
-static int _sock_setsockopt(struct socket *sock,
-                            int level,
-                            int optname,
-                            char *optval,
-                            unsigned int optlen)
+static int set_sock_opt(struct socket *sock,
+                        int level,
+                        int optname,
+                        char *optval,
+                        unsigned int optlen)
 {
     int ret = 0;
 
@@ -44,11 +44,11 @@ static int _sock_setsockopt(struct socket *sock,
     return ret;
 }
 
-static int _tcp_setsockopt(struct socket *sock,
-                           int level,
-                           int optname,
-                           char *optval,
-                           unsigned int optlen)
+static int set_tcp_opt(struct socket *sock,
+                       int level,
+                       int optname,
+                       char *optval,
+                       unsigned int optlen)
 {
     int ret = 0;
 
@@ -74,9 +74,9 @@ static int kernel_setsockopt(struct socket *sock,
                              unsigned int optlen)
 {
     if (level == SOL_SOCKET)
-        return _sock_setsockopt(sock, level, optname, optval, optlen);
+        return set_sock_opt(sock, level, optname, optval, optlen);
     else if (level == SOL_TCP)
-        return _tcp_setsockopt(sock, level, optname, optval, optlen);
+        return set_tcp_opt(sock, level, optname, optval, optlen);
     else
         return -EINVAL;
 }
