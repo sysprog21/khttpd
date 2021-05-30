@@ -3,6 +3,7 @@
 #include <linux/kthread.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
+#include <linux/version.h>
 #include <net/sock.h>
 
 #include "http_server.h"
@@ -18,6 +19,67 @@ module_param(backlog, ushort, S_IRUGO);
 static struct socket *listen_socket;
 static struct http_server_param param;
 static struct task_struct *http_server;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+static int set_sock_opt(struct socket *sock,
+                        int level,
+                        int optname,
+                        char *optval,
+                        unsigned int optlen)
+{
+    int ret = 0;
+
+    if (optlen < sizeof(int))
+        return -EINVAL;
+
+    switch (optname) {
+    case SO_REUSEADDR:
+        sock_set_reuseaddr(sock->sk);
+        break;
+    case SO_RCVBUF:
+        sock_set_rcvbuf(sock->sk, *(int *) optval);
+        break;
+    }
+
+    return ret;
+}
+
+static int set_tcp_opt(struct socket *sock,
+                       int level,
+                       int optname,
+                       char *optval,
+                       unsigned int optlen)
+{
+    int ret = 0;
+
+    if (optlen < sizeof(int))
+        return -EINVAL;
+
+    switch (optname) {
+    case TCP_NODELAY:
+        tcp_sock_set_nodelay(sock->sk);
+        break;
+    case TCP_CORK:
+        tcp_sock_set_cork(sock->sk, *(bool *) optval);
+        break;
+    }
+
+    return ret;
+}
+
+static int kernel_setsockopt(struct socket *sock,
+                             int level,
+                             int optname,
+                             char *optval,
+                             unsigned int optlen)
+{
+    if (level == SOL_SOCKET)
+        return set_sock_opt(sock, level, optname, optval, optlen);
+    else if (level == SOL_TCP)
+        return set_tcp_opt(sock, level, optname, optval, optlen);
+    return -EINVAL;
+}
+#endif
 
 static inline int setsockopt(struct socket *sock,
                              int level,
