@@ -65,6 +65,13 @@ typedef void (*sighandler_t)(int);
 
 #define MAX_EVENTS 256
 
+/**
+ * struct econn - represents one connection to server from htstress.
+ * @fd: clientfd
+ * @offs: the buffer offset represents data already read from or sent to buffer.
+ * @flags: flags represents the http response status from server, only used with
+ * BAD_REQUEST.
+ */
 struct econn {
     int fd;
     size_t offs;
@@ -140,10 +147,16 @@ static void init_conn(int efd, struct econn *ec)
         exit(1);
     }
 
+    // manipulate fd, F_SETFL: set file status flags,
     fcntl(ec->fd, F_SETFL, O_NONBLOCK);
 
     do {
+        // not accept(server), so it's not conn fd(server) but client fd.
+        // If the connection or binding succeeds, zero is returned.  On
+        // error, -1 is returned, and errno is set to indicate the error.
         ret = connect(ec->fd, (struct sockaddr *) &sss, sssln);
+        // set socket to O_NONBLOCK, connect function never blocks, so checking
+        // EAGIN is needed.
     } while (ret && errno == EAGAIN);
 
     if (ret && errno != EINPROGRESS) {
@@ -152,9 +165,11 @@ static void init_conn(int efd, struct econn *ec)
     }
 
     struct epoll_event evt = {
-        .events = EPOLLOUT, .data.ptr = ec,
+        .events = EPOLLOUT,
+        .data.ptr = ec,
     };
 
+    // add client fd into epoll fd
     if (epoll_ctl(efd, EPOLL_CTL_ADD, ec->fd, &evt)) {
         perror("epoll_ctl");
         exit(1);
@@ -176,6 +191,7 @@ static void *worker(void *arg)
         exit(1);
     }
 
+    // each worker has concurrency number econn
     for (int n = 0; n < concurrency; ++n)
         init_conn(efd, ecs + n);
 
@@ -239,7 +255,8 @@ static void *worker(void *arg)
 
                 if (ret > 0) {
                     if (debug & HTTP_REQUEST_DEBUG)
-                        write(2, outbuf + ec->offs, outbufsize - ec->offs);
+                        write(STDERR_FILENO, outbuf + ec->offs,
+                              outbufsize - ec->offs);
 
                     ec->offs += ret;
 
