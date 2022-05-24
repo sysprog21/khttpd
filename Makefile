@@ -20,6 +20,10 @@ $(GIT_HOOKS):
 htstress: htstress.c
 	$(CC) $(CFLAGS_user) -o $@ $< $(LDFLAGS_user)
 
+
+client: client.c
+	$(CC) $(CFLAGS_user) -g -o $@ $<
+
 check: all
 	@scripts/test.sh
 
