@@ -282,11 +282,6 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, &sigint_handler);
 
-    //    if (!max_requests) {
-    //        ticks = 1000;
-    //        printf("[Press Ctrl-C to finish]\n");
-    //    }
-
     printf("init conn\n");
     // init conn
     struct econn *ec = malloc(sizeof(struct econn));
@@ -315,25 +310,15 @@ int main(int argc, char *argv[])
         memset(inbuf, 0, sizeof(inbuf));
         int bytes_sent = 0;
 
-        //        printf("send..\n");
         do {
-            //            printf("%s, size: %zu\n", outbuf, outbufsize);
-            //            bytes_sent += send(ec->fd, outbuf + ec->offs,
-            //            outbufsize - ec->offs, 0);
             bytes_sent += send(ec->fd, outbuf, outbufsize, 0);
-            //            printf("bytes sent: %d\n", bytes_sent);
         } while ((size_t) bytes_sent < outbufsize);
 
-        //        printf("recv..\n");
-        //        int bytes_received = 0;
-        //        do {
         int bytes_received = recv(ec->fd, inbuf, sizeof(inbuf), 0);
         if (bytes_received < 0) {
             perror("recv() failed");
             exit(1);
         }
-        //        printf("bytes recv: %d\n", bytes_received);
-        //        } while (bytes_received >0);
     }
 
     close(ec->fd);
