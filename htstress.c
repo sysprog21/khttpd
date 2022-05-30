@@ -165,8 +165,8 @@ static void init_conn(int efd, struct econn *ec)
          * error, -1 is returned, and errno is set to indicate the error.
          */
         ret = connect(ec->fd, (struct sockaddr *) &sss, sssln);
-        /* set socket to O_NONBLOCK, connect function never blocks, so checkin
-         * EAGIN is needed.*/
+        /* set socket to O_NONBLOCK, connect function never blocks, so checking
+         * EAGAIN is needed.*/
     } while (ret && errno == EAGAIN);
 
     if (ret && errno != EINPROGRESS) {
@@ -192,7 +192,7 @@ static void init_conn(int efd, struct econn *ec)
  *
  * one worker manage concurrency number connections.
  * htstress creates thread per worker, so the num_threads also means how many
- * worker we have.
+ * workers we have.
  */
 static void *worker(void *arg)
 {
@@ -354,7 +354,7 @@ static void print_usage()
     printf(
         "Usage: htstress [options] [http://]hostname[:port]/path\n"
         "Options:\n"
-        "   -n, --number       total number of requests (0 for inifinite, "
+        "   -n, --number       total number of requests (0 for infinite, "
         "Ctrl-C to abort)\n"
         "   -c, --concurrency  number of concurrent connections\n"
         "   -t, --threads      number of threads (set this to the number of "
@@ -559,7 +559,7 @@ int main(int argc, char *argv[])
         " [%d%%]\n"
         "bad requests:  %" PRIu64
         " [%d%%]\n"
-        "socker errors: %" PRIu64
+        "socket errors: %" PRIu64
         " [%d%%]\n"
         "seconds:       %.3f\n"
         "requests/sec:  %.3f\n"
