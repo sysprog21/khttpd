@@ -169,7 +169,9 @@ static int http_server_worker(void *arg)
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = &request;
     while (!kthread_should_stop()) {
-        int ret = http_server_recv(socket, buf, RECV_BUFFER_SIZE - 1);
+        int ret;
+        memset(buf, 0, RECV_BUFFER_SIZE);
+        ret = http_server_recv(socket, buf, RECV_BUFFER_SIZE - 1);
         if (ret <= 0) {
             if (ret)
                 pr_err("recv error: %d\n", ret);
