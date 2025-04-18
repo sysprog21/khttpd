@@ -111,7 +111,8 @@ static const struct option long_options[] = {
     {"number", 1, NULL, 'n'},  {"concurrency", 1, NULL, 'c'},
     {"threads", 0, NULL, 't'}, {"udaddr", 1, NULL, 'u'},
     {"host", 1, NULL, 'h'},    {"debug", 0, NULL, 'd'},
-    {"help", 0, NULL, '%'},    {NULL, 0, NULL, 0}};
+    {"help", 0, NULL, '%'},    {NULL, 0, NULL, 0},
+};
 
 static void sigint_handler(int arg)
 {
@@ -135,8 +136,7 @@ static void end_time()
     }
 }
 
-/*
- * init_conn - initialize new econn or reset closed econn, then put into the
+/* init_conn - initialize new econn or reset closed econn, then put into the
  * epoll fd.
  * @efd: epoll fd
  * @ec:  empty or closed econn
@@ -158,8 +158,7 @@ static void init_conn(int efd, struct econn *ec)
     fcntl(ec->fd, F_SETFL, O_NONBLOCK);
 
     do {
-        /*
-         * not accept(server), so it's not conn fd(server side) but client fd.
+        /* not accept(server), so it's not conn fd(server side) but client fd.
          *
          * If the connection or binding succeeds, zero is returned.  On
          * error, -1 is returned, and errno is set to indicate the error.
@@ -186,8 +185,7 @@ static void init_conn(int efd, struct econn *ec)
     }
 }
 
-/*
- * worker - hold epoll logic to handle http request and response.
+/* worker - hold epoll logic to handle http request and response.
  * @arg: no use
  *
  * one worker manage concurrency number connections.

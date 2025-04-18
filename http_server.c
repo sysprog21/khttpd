@@ -42,21 +42,25 @@ struct http_request {
 static int http_server_recv(struct socket *sock, char *buf, size_t size)
 {
     struct kvec iov = {.iov_base = (void *) buf, .iov_len = size};
-    struct msghdr msg = {.msg_name = 0,
-                         .msg_namelen = 0,
-                         .msg_control = NULL,
-                         .msg_controllen = 0,
-                         .msg_flags = 0};
+    struct msghdr msg = {
+        .msg_name = 0,
+        .msg_namelen = 0,
+        .msg_control = NULL,
+        .msg_controllen = 0,
+        .msg_flags = 0,
+    };
     return kernel_recvmsg(sock, &msg, &iov, 1, size, msg.msg_flags);
 }
 
 static int http_server_send(struct socket *sock, const char *buf, size_t size)
 {
-    struct msghdr msg = {.msg_name = NULL,
-                         .msg_namelen = 0,
-                         .msg_control = NULL,
-                         .msg_controllen = 0,
-                         .msg_flags = 0};
+    struct msghdr msg = {
+        .msg_name = NULL,
+        .msg_namelen = 0,
+        .msg_control = NULL,
+        .msg_controllen = 0,
+        .msg_flags = 0,
+    };
     int done = 0;
     while (done < size) {
         struct kvec iov = {
@@ -152,7 +156,8 @@ static int http_server_worker(void *arg)
         .on_header_value = http_parser_callback_header_value,
         .on_headers_complete = http_parser_callback_headers_complete,
         .on_body = http_parser_callback_body,
-        .on_message_complete = http_parser_callback_message_complete};
+        .on_message_complete = http_parser_callback_message_complete,
+    };
     struct http_request request;
     struct socket *socket = (struct socket *) arg;
 
