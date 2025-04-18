@@ -369,7 +369,7 @@ static void print_usage()
 int main(int argc, char *argv[])
 {
     pthread_t useless_thread;
-    char *host = NULL;
+    const char *host = NULL;
     char *node = NULL;
     char *port = "http";
     struct sockaddr_in *ssin = (struct sockaddr_in *) &sss;

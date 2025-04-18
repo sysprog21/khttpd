@@ -32,14 +32,14 @@ clean:
 # with "compat/string.h", which is just a wrapper to Linux kernel headers.
 # TODO: rewrite with elegant scripts
 http_parser.c:
-	wget -q https://raw.githubusercontent.com/nodejs/http-parser/master/http_parser.c
+	wget -q https://raw.githubusercontent.com/nodejs/http-parser/main/http_parser.c
 	@sed -i 's/#include <assert.h>/#include "compat\/assert.h"/' $@
 	@sed -i 's/#include <stddef.h>/#include "compat\/stddef.h"/' $@
 	@sed -i 's/#include <ctype.h>/#include "compat\/ctype.h"/' $@
 	@sed -i 's/#include <string.h>/#include "compat\/string.h"/' $@
 	@sed -i 's/#include <limits.h>/#include "compat\/limits.h"/' $@
 	@echo "File $@ was patched."
-	wget -q https://raw.githubusercontent.com/nodejs/http-parser/master/http_parser.h
+	wget -q https://raw.githubusercontent.com/nodejs/http-parser/main/http_parser.h
 	@sed -i 's/#include <stddef.h>/#include "compat\/stddef.h"/' http_parser.h
 	@sed -i 's/#include <stdint.h>/#include "compat\/stdint.h"/' http_parser.h
 	@echo "File http_parser.h was patched."
