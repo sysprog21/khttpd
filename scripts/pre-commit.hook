@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+CPPCHECK_unmatched=
+for f in *.c *.h; do
+    CPPCHECK_unmatched="$CPPCHECK_unmatched --suppress=unmatchedSuppression:$f"
+done
 # http-parser was taken from Node.js, and we don't tend to validate it.
 CPPCHECK_suppresses="--suppress=missingIncludeSystem \
                      --suppress=unusedFunction:http_parser.c \
@@ -8,7 +12,7 @@ CPPCHECK_suppresses="--suppress=missingIncludeSystem \
 		     --suppress=unknownMacro:http_server.c \
                      --suppress=unusedStructMember:http_parser.h \
                      --suppress=unusedStructMember:http_server.h"
-CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses"
+CPPCHECK_OPTS="-I. --enable=all --error-exitcode=1 --force $CPPCHECK_suppresses $CPPCHECK_unmatched"
 
 RETURN=0
 CLANG_FORMAT=$(which clang-format)
