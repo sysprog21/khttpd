@@ -38,6 +38,7 @@ http_parser.c:
 	@sed -i 's/#include <ctype.h>/#include "compat\/ctype.h"/' $@
 	@sed -i 's/#include <string.h>/#include "compat\/string.h"/' $@
 	@sed -i 's/#include <limits.h>/#include "compat\/limits.h"/' $@
+	@sed -i -E 's@/\*[[:space:]]*fall[[:space:]-]*through[[:space:]]*\*/@fallthrough;@Ig' $@
 	@echo "File $@ was patched."
 	wget -q https://raw.githubusercontent.com/nodejs/http-parser/main/http_parser.h
 	@sed -i 's/#include <stddef.h>/#include "compat\/stddef.h"/' http_parser.h
