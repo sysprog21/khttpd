@@ -19,6 +19,7 @@ module_param(backlog, ushort, S_IRUGO);
 static struct socket *listen_socket;
 static struct http_server_param param;
 static struct task_struct *http_server;
+struct workqueue_struct *khttpd_wq;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
 static int set_sock_opt(struct socket *sock,
@@ -160,10 +161,17 @@ static int __init khttpd_init(void)
         return err;
     }
     param.listen_socket = listen_socket;
-    http_server = kthread_run(http_server_daemon, &param, KBUILD_MODNAME);
+    if (!(khttpd_wq = alloc_workqueue(MODULE_NAME, 0, 0))) {
+        pr_err("can't allocate workqueue\n");
+        close_listen_socket(listen_socket);
+        return -ENOMEM;
+    }
+
+    http_server = kthread_run(http_server_daemon, &param, MODULE_NAME);
     if (IS_ERR(http_server)) {
         pr_err("can't start http server daemon\n");
         close_listen_socket(listen_socket);
+        destroy_workqueue(khttpd_wq);
         return PTR_ERR(http_server);
     }
     return 0;
@@ -174,6 +182,7 @@ static void __exit khttpd_exit(void)
     send_sig(SIGTERM, http_server, 1);
     kthread_stop(http_server);
     close_listen_socket(listen_socket);
+    destroy_workqueue(khttpd_wq);
     pr_info("module unloaded\n");
 }
 
