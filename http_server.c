@@ -217,6 +217,7 @@ int http_server_daemon(void *arg)
         worker = kthread_run(http_server_worker, socket, KBUILD_MODNAME);
         if (IS_ERR(worker)) {
             pr_err("can't create more worker process\n");
+            kernel_sock_shutdown(socket, SHUT_RDWR);
             sock_release(socket);
             continue;
         }
