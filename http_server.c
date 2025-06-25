@@ -160,6 +160,7 @@ static int http_server_worker(void *arg)
     };
     struct http_request request;
     struct socket *socket = (struct socket *) arg;
+    int err = 0;
 
     allow_signal(SIGKILL);
     allow_signal(SIGTERM);
@@ -167,7 +168,8 @@ static int http_server_worker(void *arg)
     buf = kzalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
     if (!buf) {
         pr_err("can't allocate memory!\n");
-        return -1;
+        err = -ENOMEM;
+        goto out;
     }
 
     request.socket = socket;
@@ -176,19 +178,23 @@ static int http_server_worker(void *arg)
     while (!kthread_should_stop()) {
         int ret = http_server_recv(socket, buf, RECV_BUFFER_SIZE - 1);
         if (ret <= 0) {
-            if (ret)
+            if (ret) {
                 pr_err("recv error: %d\n", ret);
-            break;
+                err = ret;
+            }
+            goto out_free_buf;
         }
         http_parser_execute(&parser, &setting, buf, ret);
         if (request.complete && !http_should_keep_alive(&parser))
-            break;
+            goto out_free_buf;
         memset(buf, 0, RECV_BUFFER_SIZE);
     }
+out_free_buf:
+    kfree(buf);
+out:
     kernel_sock_shutdown(socket, SHUT_RDWR);
     sock_release(socket);
-    kfree(buf);
-    return 0;
+    return err;
 }
 
 int http_server_daemon(void *arg)
@@ -211,6 +217,7 @@ int http_server_daemon(void *arg)
         worker = kthread_run(http_server_worker, socket, KBUILD_MODNAME);
         if (IS_ERR(worker)) {
             pr_err("can't create more worker process\n");
+            sock_release(socket);
             continue;
         }
     }
