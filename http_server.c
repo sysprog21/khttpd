@@ -30,7 +30,6 @@
     "Content-Type: text/plain" CRLF "Content-Length: 21" CRLF          \
     "Connection: KeepAlive" CRLF CRLF "501 Not Implemented" CRLF
 
-#define RECV_BUFFER_SIZE 4096
 
 struct http_request {
     struct socket *socket;
@@ -165,7 +164,7 @@ static int http_server_worker(void *arg)
     allow_signal(SIGKILL);
     allow_signal(SIGTERM);
 
-    buf = kzalloc(RECV_BUFFER_SIZE, GFP_KERNEL);
+    buf = mempool_alloc(http_buf_pool, GFP_KERNEL);
     if (!buf) {
         pr_err("can't allocate memory!\n");
         err = -ENOMEM;
@@ -190,7 +189,7 @@ static int http_server_worker(void *arg)
         memset(buf, 0, RECV_BUFFER_SIZE);
     }
 out_free_buf:
-    kfree(buf);
+    mempool_free(buf, http_buf_pool);
 out:
     kernel_sock_shutdown(socket, SHUT_RDWR);
     sock_release(socket);

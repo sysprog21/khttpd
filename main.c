@@ -1,7 +1,9 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/kthread.h>
+#include <linux/mempool.h>
 #include <linux/sched/signal.h>
+#include <linux/slab.h>
 #include <linux/tcp.h>
 #include <linux/version.h>
 #include <net/sock.h>
@@ -10,6 +12,9 @@
 
 #define DEFAULT_PORT 8081
 #define DEFAULT_BACKLOG 100
+#define POOL_MIN_NR 4
+
+mempool_t *http_buf_pool;
 
 static ushort port = DEFAULT_PORT;
 module_param(port, ushort, S_IRUGO);
@@ -154,6 +159,11 @@ static void close_listen_socket(struct socket *socket)
 
 static int __init khttpd_init(void)
 {
+    if (!(http_buf_pool = mempool_create(POOL_MIN_NR, http_buf_alloc,
+                                         http_buf_free, NULL))) {
+        pr_err("failed to create mempool\n");
+        return -ENOMEM;
+    }
     int err = open_listen_socket(port, backlog, &listen_socket);
     if (err < 0) {
         pr_err("can't open listen socket\n");
