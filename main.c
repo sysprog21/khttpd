@@ -132,7 +132,11 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_ANY);
     s.sin_port = htons(port);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 19, 0)
+    err = kernel_bind(sock, (struct sockaddr_unsized *) &s, sizeof(s));
+#else
     err = kernel_bind(sock, (struct sockaddr *) &s, sizeof(s));
+#endif
     if (err < 0) {
         pr_err("kernel_bind() failure, err=%d\n", err);
         goto bail_sock;
