@@ -159,24 +159,33 @@ static void close_listen_socket(struct socket *socket)
 
 static int __init khttpd_init(void)
 {
+    int err;
+
     if (!(http_buf_pool = mempool_create(POOL_MIN_NR, http_buf_alloc,
                                          http_buf_free, NULL))) {
         pr_err("failed to create mempool\n");
         return -ENOMEM;
     }
-    int err = open_listen_socket(port, backlog, &listen_socket);
+    err = open_listen_socket(port, backlog, &listen_socket);
     if (err < 0) {
         pr_err("can't open listen socket\n");
-        return err;
+        goto err_destroy_pool;
     }
     param.listen_socket = listen_socket;
     http_server = kthread_run(http_server_daemon, &param, KBUILD_MODNAME);
     if (IS_ERR(http_server)) {
         pr_err("can't start http server daemon\n");
-        close_listen_socket(listen_socket);
-        return PTR_ERR(http_server);
+        err = PTR_ERR(http_server);
+        goto err_close_socket;
     }
     return 0;
+
+err_close_socket:
+    close_listen_socket(listen_socket);
+err_destroy_pool:
+    mempool_destroy(http_buf_pool);
+    http_buf_pool = NULL;
+    return err;
 }
 
 static void __exit khttpd_exit(void)
