@@ -11,6 +11,7 @@ struct http_server_param {
 };
 
 extern int http_server_daemon(void *arg);
+extern void http_server_stop_workers(void);
 
 static inline void *http_buf_alloc(gfp_t gfp_mask, void *pool_data)
 {
