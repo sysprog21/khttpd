@@ -3,6 +3,7 @@
 #include <linux/completion.h>
 #include <linux/kthread.h>
 #include <linux/list.h>
+#include <linux/sched.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
 #include <linux/version.h>
@@ -268,9 +269,15 @@ int http_server_daemon(void *arg)
         if (err < 0) {
             if (signal_pending(current))
                 break;
-            pr_err("kernel_accept() error: %d\n", err);
+            /* -EAGAIN means the accept timeout expired; loop back to reap */
+            if (err != -EAGAIN)
+                pr_err("kernel_accept() error: %d\n", err);
             continue;
         }
+        /* Accepted sockets inherit the listener's timeout. Restore the
+         * default so idle keep-alive connections are not dropped.
+         */
+        WRITE_ONCE(socket->sk->sk_rcvtimeo, MAX_SCHEDULE_TIMEOUT);
         conn = kmalloc(sizeof(*conn), GFP_KERNEL);
         if (!conn) {
             pr_err("can't allocate memory for connection\n");

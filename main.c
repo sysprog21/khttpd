@@ -1,5 +1,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/jiffies.h>
 #include <linux/kthread.h>
 #include <linux/mempool.h>
 #include <linux/sched/signal.h>
@@ -13,6 +14,7 @@
 #define DEFAULT_PORT 8081
 #define DEFAULT_BACKLOG 100
 #define POOL_MIN_NR 4
+#define ACCEPT_TIMEOUT_MS 5000
 
 mempool_t *http_buf_pool;
 
@@ -135,6 +137,9 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
         pr_err("kernel_bind() failure, err=%d\n", err);
         goto bail_sock;
     }
+
+    /* Let accept() time out so the daemon can reap finished workers */
+    WRITE_ONCE(sock->sk->sk_rcvtimeo, msecs_to_jiffies(ACCEPT_TIMEOUT_MS));
 
     err = kernel_listen(sock, backlog);
     if (err < 0) {
