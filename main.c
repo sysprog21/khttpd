@@ -1,5 +1,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/jiffies.h>
 #include <linux/kthread.h>
 #include <linux/mempool.h>
 #include <linux/sched/signal.h>
@@ -13,6 +14,7 @@
 #define DEFAULT_PORT 8081
 #define DEFAULT_BACKLOG 100
 #define POOL_MIN_NR 4
+#define ACCEPT_TIMEOUT_MS 5000
 
 mempool_t *http_buf_pool;
 
@@ -136,6 +138,9 @@ static int open_listen_socket(ushort port, ushort backlog, struct socket **res)
         goto bail_sock;
     }
 
+    /* Let accept() time out so the daemon can reap finished workers */
+    WRITE_ONCE(sock->sk->sk_rcvtimeo, msecs_to_jiffies(ACCEPT_TIMEOUT_MS));
+
     err = kernel_listen(sock, backlog);
     if (err < 0) {
         pr_err("kernel_listen() failure, err=%d\n", err);
@@ -159,31 +164,42 @@ static void close_listen_socket(struct socket *socket)
 
 static int __init khttpd_init(void)
 {
+    int err;
+
     if (!(http_buf_pool = mempool_create(POOL_MIN_NR, http_buf_alloc,
                                          http_buf_free, NULL))) {
         pr_err("failed to create mempool\n");
         return -ENOMEM;
     }
-    int err = open_listen_socket(port, backlog, &listen_socket);
+    err = open_listen_socket(port, backlog, &listen_socket);
     if (err < 0) {
         pr_err("can't open listen socket\n");
-        return err;
+        goto err_destroy_pool;
     }
     param.listen_socket = listen_socket;
     http_server = kthread_run(http_server_daemon, &param, KBUILD_MODNAME);
     if (IS_ERR(http_server)) {
         pr_err("can't start http server daemon\n");
-        close_listen_socket(listen_socket);
-        return PTR_ERR(http_server);
+        err = PTR_ERR(http_server);
+        goto err_close_socket;
     }
     return 0;
+
+err_close_socket:
+    close_listen_socket(listen_socket);
+err_destroy_pool:
+    mempool_destroy(http_buf_pool);
+    http_buf_pool = NULL;
+    return err;
 }
 
 static void __exit khttpd_exit(void)
 {
     send_sig(SIGTERM, http_server, 1);
+    /* Returns only after the daemon has drained every worker */
     kthread_stop(http_server);
     close_listen_socket(listen_socket);
+    mempool_destroy(http_buf_pool);
     pr_info("module unloaded\n");
 }
 

@@ -1,8 +1,16 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/completion.h>
 #include <linux/kthread.h>
+#include <linux/list.h>
+#include <linux/sched.h>
 #include <linux/sched/signal.h>
 #include <linux/tcp.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
+#define kthread_complete_and_exit(comp, code) complete_and_exit(comp, code)
+#endif
 
 #include "http_parser.h"
 #include "http_server.h"
@@ -37,6 +45,15 @@ struct http_request {
     char request_url[128];
     int complete;
 };
+
+/* conn_list is only touched by the daemon thread, so no lock is needed. */
+struct khttpd_conn {
+    struct list_head node;
+    struct socket *socket;
+    struct completion done;
+};
+
+static LIST_HEAD(conn_list);
 
 static int http_server_recv(struct socket *sock, char *buf, size_t size)
 {
@@ -158,7 +175,8 @@ static int http_server_worker(void *arg)
         .on_message_complete = http_parser_callback_message_complete,
     };
     struct http_request request;
-    struct socket *socket = (struct socket *) arg;
+    struct khttpd_conn *conn = (struct khttpd_conn *) arg;
+    struct socket *socket = conn->socket;
     int err = 0;
 
     allow_signal(SIGKILL);
@@ -192,34 +210,92 @@ out_free_buf:
     mempool_free(buf, http_buf_pool);
 out:
     kernel_sock_shutdown(socket, SHUT_RDWR);
-    sock_release(socket);
-    return err;
+    /* Does not return, and completes from core kernel code, so no
+     * module code runs after this.
+     */
+    kthread_complete_and_exit(&conn->done, err);
+}
+
+/* Only safe once the worker's completion has been observed. */
+static void free_conn(struct khttpd_conn *conn)
+{
+    list_del(&conn->node);
+    sock_release(conn->socket);
+    kfree(conn);
+}
+
+static void reap_finished_workers(void)
+{
+    struct khttpd_conn *conn, *tmp;
+
+    list_for_each_entry_safe (conn, tmp, &conn_list, node) {
+        if (try_wait_for_completion(&conn->done))
+            free_conn(conn);
+    }
+}
+
+/* Shut every socket down to break the workers out of recv, then wait
+ * for them.  Safe to destroy http_buf_pool once this returns.
+ */
+static void http_server_stop_workers(void)
+{
+    struct khttpd_conn *conn, *tmp;
+
+    list_for_each_entry (conn, &conn_list, node)
+        kernel_sock_shutdown(conn->socket, SHUT_RDWR);
+    list_for_each_entry_safe (conn, tmp, &conn_list, node) {
+        wait_for_completion(&conn->done);
+        free_conn(conn);
+    }
 }
 
 int http_server_daemon(void *arg)
 {
     struct socket *socket;
     struct task_struct *worker;
+    struct khttpd_conn *conn;
     struct http_server_param *param = (struct http_server_param *) arg;
 
     allow_signal(SIGKILL);
     allow_signal(SIGTERM);
 
     while (!kthread_should_stop()) {
-        int err = kernel_accept(param->listen_socket, &socket, 0);
+        int err;
+
+        reap_finished_workers();
+        err = kernel_accept(param->listen_socket, &socket, 0);
         if (err < 0) {
             if (signal_pending(current))
                 break;
-            pr_err("kernel_accept() error: %d\n", err);
+            /* -EAGAIN means the accept timeout expired; loop back to reap */
+            if (err != -EAGAIN)
+                pr_err("kernel_accept() error: %d\n", err);
             continue;
         }
-        worker = kthread_run(http_server_worker, socket, KBUILD_MODNAME);
-        if (IS_ERR(worker)) {
-            pr_err("can't create more worker process\n");
+        /* Accepted sockets inherit the listener's timeout. Restore the
+         * default so idle keep-alive connections are not dropped.
+         */
+        WRITE_ONCE(socket->sk->sk_rcvtimeo, MAX_SCHEDULE_TIMEOUT);
+        conn = kmalloc(sizeof(*conn), GFP_KERNEL);
+        if (!conn) {
+            pr_err("can't allocate memory for connection\n");
             kernel_sock_shutdown(socket, SHUT_RDWR);
             sock_release(socket);
             continue;
         }
+        conn->socket = socket;
+        init_completion(&conn->done);
+        worker = kthread_run(http_server_worker, conn, KBUILD_MODNAME);
+        if (IS_ERR(worker)) {
+            pr_err("can't create more worker process\n");
+            kernel_sock_shutdown(socket, SHUT_RDWR);
+            sock_release(socket);
+            kfree(conn);
+            continue;
+        }
+        list_add(&conn->node, &conn_list);
     }
+    /* The loop also ends on a signal, so drain here, not in khttpd_exit() */
+    http_server_stop_workers();
     return 0;
 }
