@@ -46,9 +46,7 @@ struct http_request {
     int complete;
 };
 
-/* conn_list is touched by the daemon, and by khttpd_exit() only after
- * kthread_stop() joined it, so no lock is needed.
- */
+/* conn_list is only touched by the daemon thread, so no lock is needed. */
 struct khttpd_conn {
     struct list_head node;
     struct socket *socket;
@@ -239,7 +237,7 @@ static void reap_finished_workers(void)
 /* Shut every socket down to break the workers out of recv, then wait
  * for them.  Safe to destroy http_buf_pool once this returns.
  */
-void http_server_stop_workers(void)
+static void http_server_stop_workers(void)
 {
     struct khttpd_conn *conn, *tmp;
 
@@ -297,5 +295,7 @@ int http_server_daemon(void *arg)
         }
         list_add(&conn->node, &conn_list);
     }
+    /* The loop also ends on a signal, so drain here, not in khttpd_exit() */
+    http_server_stop_workers();
     return 0;
 }

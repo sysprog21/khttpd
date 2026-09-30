@@ -196,9 +196,9 @@ err_destroy_pool:
 static void __exit khttpd_exit(void)
 {
     send_sig(SIGTERM, http_server, 1);
+    /* Returns only after the daemon has drained every worker */
     kthread_stop(http_server);
     close_listen_socket(listen_socket);
-    http_server_stop_workers();
     mempool_destroy(http_buf_pool);
     pr_info("module unloaded\n");
 }
